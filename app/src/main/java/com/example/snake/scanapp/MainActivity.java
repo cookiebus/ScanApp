@@ -56,6 +56,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.json.JSONObject;
 
@@ -69,12 +71,28 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     public Camera.PictureCallback rawCallback;
     public Camera.ShutterCallback shutterCallback;
     public Camera.PictureCallback jpegCallback;
+    public Camera.AutoFocusCallback mAutoFocusCallback;
+
     public Boolean start_scanning = false;
+    private TimerTask mTimerTask;
+    private Timer mTimer;
 
     private static final int TIME_OUT = 10*10000000; //超时时间
     private static final String CHARSET = "utf-8"; //设置编码
     public static final String SUCCESS="1";
     public static final String FAILURE="0";
+
+    /*
+    private class CameraTimerTask extends TimerTask {
+        @Override
+        public void run() {
+            // TODO Auto-generated method stub
+            if(camera != null) {
+                camera.autoFocus(mAutoFocusCallback);
+            }
+        }
+    }
+    */
 
     private class UploadFileTask extends AsyncTask<Void, Void, Boolean> {
         private byte[] data = null;
@@ -159,7 +177,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         setContentView(R.layout.activity_main);
 
         surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
-        Button button = (Button) findViewById(R.id.stop_button);
+        final Button button = (Button) findViewById(R.id.stop_button);
 
         surfaceHolder = surfaceView.getHolder();
 
@@ -178,7 +196,22 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
             }
         };
 
+        /*
+        mAutoFocusCallback = new Camera.AutoFocusCallback() {
+            public void onAutoFocus(boolean success, Camera camera) {
+                // TODO Auto-generated method stub
+                if(success){
+                    camera.setOneShotPreviewCallback(null);
+                    Toast.makeText(getApplicationContext(), "自动聚焦成功" , Toast.LENGTH_SHORT).show();
+                }
+            }
+        };
+        */
         start_scanning = false;
+
+        // mTimer = new Timer();
+        // mTimerTask = new CameraTimerTask();
+        // mTimer.schedule(mTimerTask, 0, 10);
 
         assert button != null;
         button.setOnClickListener(new View.OnClickListener() {
@@ -187,10 +220,12 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                 Log.i("MainActivity", "Change Status " + start_scanning.toString());
                 if (start_scanning) {
                     start_scanning = false;
+                    button.setText("Start");
                     handler.removeCallbacks(runnable);
                 } else {
                     start_scanning = true;
-                    handler.postDelayed(runnable, 1);
+                    button.setText("Stop");
+                    handler.postDelayed(runnable, 4000);
                 }
             }
         });
@@ -216,7 +251,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                 } finally {
                 }
                 */
-                /*Toast.makeText(getApplicationContext(), "Picture Saved", Toast.LENGTH_LONG).show();*/
+                Toast.makeText(getApplicationContext(), "Post Success!", Toast.LENGTH_LONG).show();
                 refreshCamera();
                 try {
                     // camera.setPreviewDisplay(surfaceHolder);
@@ -278,6 +313,18 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     }
     */
 
+    //相机参数的初始化设置
+    private void initCamera() {
+        Camera.Parameters parameters = camera.getParameters();
+        //parameters.setPictureSize(surfaceView.getWidth(), surfaceView.getHeight());  // 部分定制手机，无法正常识别该方法。
+        // parameters.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+        parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);//1连续对焦
+        camera.setParameters(parameters);
+        camera.startPreview();
+        camera.cancelAutoFocus();// 2如果要实现连续的自动对焦，这一句必须加上
+
+    }
+
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         try {
@@ -293,9 +340,11 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         param = camera.getParameters();
         param.setPreviewSize(352, 288);
         camera.setParameters(param);
+        camera.setDisplayOrientation(90);
 
         try {
             camera.setPreviewDisplay(holder);
+            initCamera();
             camera.startPreview();
         }
 
@@ -308,6 +357,15 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         refreshCamera();
+        camera.autoFocus(new Camera.AutoFocusCallback() {
+            @Override
+            public void onAutoFocus(boolean success, Camera camera) {
+                if(success){
+                    initCamera();//实现相机的参数初始化
+                    camera.cancelAutoFocus();//只有加上了这一句，才会自动对焦。
+                }
+            }
+        });
     }
 
     @Override

@@ -58,6 +58,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Timer;
 import java.util.TimerTask;
+import android.graphics.BitmapFactory;
 
 import org.json.JSONObject;
 
@@ -67,6 +68,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     public Camera camera;
     public SurfaceView surfaceView;
     public SurfaceHolder surfaceHolder;
+    public Button button;
+    public ImageView img;
 
     public Camera.PictureCallback rawCallback;
     public Camera.ShutterCallback shutterCallback;
@@ -93,13 +96,35 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         }
     }
     */
-
     private class UploadFileTask extends AsyncTask<Void, Void, Boolean> {
         private byte[] data = null;
 
         private UploadFileTask(byte[] data) {
             super();
             this.data = data;
+        }
+
+        public Bitmap getHttpBitmap(String url) {
+            URL myFileUrl = null;
+            Bitmap bitmap = null;
+            try {
+                Log.d("MainActivity", url);
+                myFileUrl = new URL(url);
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+            try {
+                HttpURLConnection conn = (HttpURLConnection) myFileUrl.openConnection();
+                conn.setConnectTimeout(0);
+                conn.setDoInput(true);
+                conn.connect();
+                InputStream is = conn.getInputStream();
+                bitmap = BitmapFactory.decodeStream(is);
+                is.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return bitmap;
         }
 
         @Override
@@ -158,8 +183,13 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                         responseReader.close();
                         JSONObject v = new JSONObject(sb.toString());
                         String success = v.optString("success");
-                        String image_path = v.optString("image_path");
-                        Log.e("MainActivity", success + " " + image_path);
+                        String image_url = "http://120.27.109.190:8002/media/" + v.optString("image_path");
+                        if (success.equals("true")) {
+                            Bitmap bm = getHttpBitmap(image_url);
+                            camera.stopPreview();
+                            start_scanning = false;
+                        }
+                        Log.e("MainActivity", success + " " + image_url);
                         return true;
                     }
                     return false;
@@ -177,7 +207,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         setContentView(R.layout.activity_main);
 
         surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
-        final Button button = (Button) findViewById(R.id.stop_button);
+        button = (Button) findViewById(R.id.stop_button);
+        img = (ImageView) findViewById(R.id.image_view);
 
         surfaceHolder = surfaceView.getHolder();
 

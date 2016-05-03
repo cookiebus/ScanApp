@@ -10,16 +10,18 @@ import android.content.ClipboardManager;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.Context;
 
 import android.graphics.Bitmap;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.ShutterCallback;
 
+import android.os.PersistableBundle;
 import android.os.BatteryManager;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.AsyncTask;
 
 import android.view.Menu;
 import android.view.MenuItem;
@@ -34,6 +36,7 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.Toolbar;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -51,7 +54,10 @@ import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import android.os.AsyncTask;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
+import org.json.JSONObject;
 
 
 public class MainActivity extends Activity implements SurfaceHolder.Callback {
@@ -74,12 +80,13 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         private byte[] data = null;
 
         private UploadFileTask(byte[] data) {
+            super();
             this.data = data;
         }
 
         @Override
         protected Boolean doInBackground(Void... params) {
-            String RequestURL = "http://120.27.109.190:8002/images/compute/";
+            String RequestURL = "http://120.27.109.190:8003/api/upload/";
             String BOUNDARY = UUID.randomUUID().toString(); //边界标识 随机生成
             String PREFIX = "--", LINE_END = "\r\n";
             String CONTENT_TYPE = "multipart/form-data"; //内容类型
@@ -94,10 +101,11 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                 conn.setUseCaches(false); //不允许使用缓存
                 conn.setRequestMethod("POST"); //请求方式
                 conn.setRequestProperty("Charset", CHARSET);
-
+                Log.i("MainActivity", "Set code...");
                 //设置编码
                 conn.setRequestProperty("connection", "keep-alive");
                 conn.setRequestProperty("Content-Type", CONTENT_TYPE + ";boundary=" + BOUNDARY);
+
                 if (data != null) {
                     /** * 当文件不为空，把文件包装并且上传 */
                     OutputStream outputSteam = conn.getOutputStream();
@@ -106,12 +114,9 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                     sb.append(PREFIX);
                     sb.append(BOUNDARY);
                     sb.append(LINE_END);
-                    /**
-                     * 这里重点注意：
-                     * name里面的值为服务器端需要key 只有这个key 才可以得到对应的文件
-                     * filename是文件的名字，包含后缀名的 比如:abc.png
-                     */
+
                     String filename = String.format("capture-%d.jpg", System.currentTimeMillis());
+                    Log.i("MainActivity", filename);
                     sb.append("Content-Disposition: form-data; name=\"image\"; filename=\"" + filename + "\"" + LINE_END);
                     sb.append("Content-Type: application/octet-stream; charset=" + CHARSET + LINE_END);
                     sb.append(LINE_END);
@@ -123,29 +128,23 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                     dos.write(end_data);
                     dos.flush();
                     int res = conn.getResponseCode();
-                    Log.e("", "response code:" + res);
+                    Log.e("MainActivity", "response code:" + res);
                     if (HttpURLConnection.HTTP_OK == res) {
-                        return true;
                         //当正确响应时处理数据
-                        /*
-                        StringBuilder sb = new StringBuilder();
+                        sb.setLength(0);
                         String readLine;
-                        //处理响应流，必须与服务器响应流输出的编码一致
-                        BufferedReader responseReader = new BufferedReader(new InputStreamReader(httpConn.getInputStream()));
+                        BufferedReader responseReader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                         while ((readLine = responseReader.readLine()) != null) {
                             sb.append(readLine);
                         }
                         responseReader.close();
                         JSONObject v = new JSONObject(sb.toString());
-                        mProblemItem = new ProblemItem(v.optInt("id"), userId, v.optString("user"),
-                                v.optString("title"), v.optString("description"),
-                                v.optString("problem_image"), v.optString("create_at"),
-                                v.optInt("up"), v.optJSONArray("comments"),
-                                v.optBoolean("is_favorite"), v.optInt("user_id"),
-                                v.optDouble("X", 0), v.optDouble("Y", 0), v.optString("position"));
+                        String success = v.optString("success");
+                        String image_path = v.optString("image_path");
+                        Log.e("MainActivity", success + " " + image_path);
                         return true;
-                        */
                     }
+                    return false;
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -186,24 +185,24 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
             @Override
             public void onClick(View v) {
                 Log.i("MainActivity", "Change Status " + start_scanning.toString());
-                if (start_scanning)
+                if (start_scanning) {
+                    start_scanning = false;
                     handler.removeCallbacks(runnable);
-                else
+                } else {
+                    start_scanning = true;
                     handler.postDelayed(runnable, 1);
-                start_scanning = !start_scanning;
+                }
             }
         });
 
-        handler.removeCallbacks(runnable);
         jpegCallback = new PictureCallback() {
 
             @Override
             public void onPictureTaken(byte[] data, Camera camera) {
-                Log.i("MainActivity", "Get Data From Camera");
-                Log.i("MainActivity", "" + data.length);
-                // UploadFileTask task = new UploadFileTask(data);
-                // task.doInBackground();
-                // uploadFile(data, "http://120.27.109.190:8003/images/compute/");
+                Log.i("MainActivity", "Get Data From Camera: " + data.length);
+                UploadFileTask task = new UploadFileTask(data);
+                Log.i("MainActivity", "" + "execute upload...");
+                task.execute();
                 /*
                 FileOutputStream outStream = null;
                 try {
@@ -217,7 +216,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                 } finally {
                 }
                 */
-                Toast.makeText(getApplicationContext(), "Picture Saved", Toast.LENGTH_LONG).show();
+                /*Toast.makeText(getApplicationContext(), "Picture Saved", Toast.LENGTH_LONG).show();*/
                 refreshCamera();
                 try {
                     // camera.setPreviewDisplay(surfaceHolder);
@@ -237,19 +236,14 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         if (surfaceHolder.getSurface() == null) {
             return;
         }
-
         try {
             camera.stopPreview();
+        } catch (Exception e) {
         }
-
-        catch (Exception e) {
-        }
-
         try {
             camera.setPreviewDisplay(surfaceHolder);
             camera.startPreview();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
         }
     }
 

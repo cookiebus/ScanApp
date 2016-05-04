@@ -1,5 +1,6 @@
 package com.example.snake.scanapp;
 
+import android.graphics.Canvas;
 import android.support.v7.app.AppCompatActivity;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -59,6 +60,7 @@ import java.io.InputStreamReader;
 import java.util.Timer;
 import java.util.TimerTask;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 
 import org.json.JSONObject;
 
@@ -102,29 +104,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         private UploadFileTask(byte[] data) {
             super();
             this.data = data;
-        }
-
-        public Bitmap getHttpBitmap(String url) {
-            URL myFileUrl = null;
-            Bitmap bitmap = null;
-            try {
-                Log.d("MainActivity", url);
-                myFileUrl = new URL(url);
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            }
-            try {
-                HttpURLConnection conn = (HttpURLConnection) myFileUrl.openConnection();
-                conn.setConnectTimeout(0);
-                conn.setDoInput(true);
-                conn.connect();
-                InputStream is = conn.getInputStream();
-                bitmap = BitmapFactory.decodeStream(is);
-                is.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return bitmap;
         }
 
         @Override
@@ -183,11 +162,17 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                         responseReader.close();
                         JSONObject v = new JSONObject(sb.toString());
                         String success = v.optString("success");
-                        String image_url = "http://120.27.109.190:8002/media/" + v.optString("image_path");
-                        if (success.equals("true")) {
-                            Bitmap bm = getHttpBitmap(image_url);
+                        String image_path = v.optString("image_path");
+                        String image_url = "http://120.27.109.190:8002/media/" + image_path;
+                        if (success.equals("true") && image_path.length() > 0) {
+                            // Bitmap bm = getHttpBitmap(image_url);
                             camera.stopPreview();
                             start_scanning = false;
+                            Intent intent = new Intent(MainActivity.this, ImageShowActivity.class);
+                            Bundle bundle=new Bundle();
+                            bundle.putString("image_url", image_url);
+                            intent.putExtras(bundle);
+                            startActivity(intent);
                         }
                         Log.e("MainActivity", success + " " + image_url);
                         return true;
@@ -208,7 +193,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
         surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
         button = (Button) findViewById(R.id.stop_button);
-        img = (ImageView) findViewById(R.id.image_view);
 
         surfaceHolder = surfaceView.getHolder();
 

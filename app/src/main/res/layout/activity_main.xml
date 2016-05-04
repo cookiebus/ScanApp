@@ -12,21 +12,11 @@
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/tutorials_point"
-        android:id="@+id/textView"
-        android:layout_below="@+id/textview"
-        android:layout_centerHorizontal="true"
-        android:textColor="#ff7aff24"
-        android:textSize="5dp" />
-
     <SurfaceView
         android:id="@+id/surfaceView"
         android:layout_width="match_parent"
-        android:layout_height="720dp"
-        android:layout_below="@+id/textView" />
+        android:layout_height="460dp"
+        android:layout_below="@+id/textview" />
 
     <Button
         android:layout_width="wrap_content"

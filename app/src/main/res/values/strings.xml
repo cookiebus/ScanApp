@@ -3,7 +3,7 @@
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
     <string name="tutorials_point">Version.0.1</string>
-    <string name="camera_example">Scanning App</string>
+    <string name="camera_example">Scanning App Version 0.1</string>
     <string name="stop_scanning">Start</string>
     <string name="title_activity_image_show">ImageShowActivity</string>
 </resources>

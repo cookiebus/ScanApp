@@ -164,9 +164,9 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                         String success = v.optString("success");
                         String image_path = v.optString("image_path");
                         String image_url = "http://120.27.109.190:8002/media/" + image_path;
-                        if (success.equals("true") && image_path.length() > 0) {
+                        if (success.equals("true") && image_path.length() > 0 && start_scanning) {
                             // Bitmap bm = getHttpBitmap(image_url);
-                            camera.stopPreview();
+                            // camera.stopPreview();
                             start_scanning = false;
                             Intent intent = new Intent(MainActivity.this, ImageShowActivity.class);
                             Bundle bundle=new Bundle();
@@ -183,6 +183,13 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                 e.printStackTrace();
             }
             return false;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+           if (result) {
+               button.setText("Start");
+           }
         }
     }
 
@@ -353,6 +360,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
         Camera.Parameters param;
         param = camera.getParameters();
+        param.getSupportedPictureSizes();
         param.setPreviewSize(352, 288);
         camera.setParameters(param);
         camera.setDisplayOrientation(90);

@@ -1,6 +1,7 @@
 package com.example.snake.scanapp;
 
 import android.graphics.Canvas;
+import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -15,6 +16,7 @@ import android.content.Context;
 
 import android.graphics.Bitmap;
 import android.hardware.Camera;
+import android.hardware.Camera.Size;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.ShutterCallback;
 
@@ -38,7 +40,6 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Toolbar;
-
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -59,8 +60,14 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.List;
+import android.util.DisplayMetrics;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.common.api.GoogleApiClient;
 
 import org.json.JSONObject;
 
@@ -73,19 +80,65 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     public Button button;
     public ImageView img;
 
-    public Camera.PictureCallback rawCallback;
-    public Camera.ShutterCallback shutterCallback;
-    public Camera.PictureCallback jpegCallback;
+    public PictureCallback rawCallback;
+    public ShutterCallback shutterCallback;
+    public PictureCallback jpegCallback;
     public Camera.AutoFocusCallback mAutoFocusCallback;
 
     public Boolean start_scanning = false;
     private TimerTask mTimerTask;
     private Timer mTimer;
 
-    private static final int TIME_OUT = 10*10000000; //超时时间
+    private static final int TIME_OUT = 10 * 10000000; //超时时间
     private static final String CHARSET = "utf-8"; //设置编码
-    public static final String SUCCESS="1";
-    public static final String FAILURE="0";
+    public static final String SUCCESS = "1";
+    public static final String FAILURE = "0";
+    public DisplayMetrics dm = null;
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://com.example.snake.scanapp/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(client, viewAction);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://com.example.snake.scanapp/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(client, viewAction);
+        client.disconnect();
+    }
 
     /*
     private class CameraTimerTask extends TimerTask {
@@ -169,7 +222,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                             // camera.stopPreview();
                             start_scanning = false;
                             Intent intent = new Intent(MainActivity.this, ImageShowActivity.class);
-                            Bundle bundle=new Bundle();
+                            Bundle bundle = new Bundle();
                             bundle.putString("image_url", image_url);
                             intent.putExtras(bundle);
                             startActivity(intent);
@@ -187,9 +240,9 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
         @Override
         protected void onPostExecute(Boolean result) {
-           if (result) {
-               button.setText("Start");
-           }
+            if (result) {
+                button.setText("Start");
+            }
         }
     }
 
@@ -202,6 +255,9 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         button = (Button) findViewById(R.id.stop_button);
 
         surfaceHolder = surfaceView.getHolder();
+
+        dm = new DisplayMetrics();
+        this.getWindowManager().getDefaultDisplay().getMetrics(dm);
 
         surfaceHolder.addCallback(this);
         surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
@@ -217,18 +273,20 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                 }
             }
         };
-
         /*
         mAutoFocusCallback = new Camera.AutoFocusCallback() {
             public void onAutoFocus(boolean success, Camera camera) {
                 // TODO Auto-generated method stub
-                if(success){
-                    camera.setOneShotPreviewCallback(null);
-                    Toast.makeText(getApplicationContext(), "自动聚焦成功" , Toast.LENGTH_SHORT).show();
+                if(success) {
+                    Log.i("MainActivity", "take picture.");
+                    camera.takePicture(null, null, jpegCallback);
+                    // camera.setOneShotPreviewCallback(null);
+                    // Toast.makeText(getApplicationContext(), "自动聚焦成功" , Toast.LENGTH_SHORT).show();
                 }
             }
         };
         */
+
         start_scanning = false;
 
         // mTimer = new Timer();
@@ -283,6 +341,9 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                 }
             }
         };
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
     public void captureImage(View v) throws IOException {
@@ -347,13 +408,108 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
     }
 
+    public void setPreviewSize(Camera.Parameters parametes) {
+        List localSizes = parametes.getSupportedPreviewSizes();
+        Size biggestSize = null;
+        Size fitSize = null;// 优先选屏幕分辨率
+        Size targetSize = null;// 没有屏幕分辨率就取跟屏幕分辨率相近(大)的size
+        Size targetSiz2 = null;// 没有屏幕分辨率就取跟屏幕分辨率相近(小)的size
+        if (localSizes != null) {
+            int cameraSizeLength = localSizes.size();
+            for (int n = 0; n < cameraSizeLength; n++) {
+                Size size = (Size) localSizes.get(n);
+                if (biggestSize == null ||
+                        (size.width >= biggestSize.width && size.height >= biggestSize.height)) {
+                    biggestSize = size;
+                }
+
+                // DisplayMetrics dm = new DisplayMetrics();
+                // SurfaceView.getWindowManager().getDefaultDisplay().getMetrics(dm);
+
+                int screenWPixels = dm.widthPixels;
+                int screenHPixels = dm.heightPixels;
+
+                if (size.width == screenHPixels
+                        && size.height == screenWPixels) {
+                    fitSize = size;
+                } else if (size.width == screenHPixels
+                        || size.height == screenWPixels) {
+                    if (targetSize == null) {
+                        targetSize = size;
+                    } else if (size.width < screenHPixels
+                            || size.height < screenWPixels) {
+                        targetSiz2 = size;
+                    }
+                }
+            }
+
+            if (fitSize == null) {
+                fitSize = targetSize;
+            }
+
+            if (fitSize == null) {
+                fitSize = targetSiz2;
+            }
+
+            if (fitSize == null) {
+                fitSize = biggestSize;
+            }
+            parametes.setPreviewSize(fitSize.width, fitSize.height);
+        }
+
+    }
+
+    /**
+     * 输出的照片为最高像素
+     */
+    public void setPictureSize(Camera.Parameters parametes) {
+        List localSizes = parametes.getSupportedPictureSizes();
+        Size biggestSize = null;
+        Size fitSize = null;// 优先选预览界面的尺寸
+        Size previewSize = parametes.getPreviewSize();
+        float previewSizeScale = 0;
+        if (previewSize != null) {
+            previewSizeScale = previewSize.width / (float) previewSize.height;
+        }
+
+        if (localSizes != null) {
+            int cameraSizeLength = localSizes.size();
+            for (int n = 0; n < cameraSizeLength; n++) {
+                Size size = (Size) localSizes.get(n);
+                if (biggestSize == null) {
+                    biggestSize = size;
+                } else if (size.width >= biggestSize.width && size.height >= biggestSize.height) {
+                    biggestSize = size;
+                }
+
+                // 选出与预览界面等比的最高分辨率
+                if (previewSizeScale > 0
+                        && size.width >= previewSize.width && size.height >= previewSize.height) {
+                    float sizeScale = size.width / (float) size.height;
+                    if (sizeScale == previewSizeScale) {
+                        if (fitSize == null) {
+                            fitSize = size;
+                        } else if (size.width >= fitSize.width && size.height >= fitSize.height) {
+                            fitSize = size;
+                        }
+                    }
+                }
+            }
+
+            // 如果没有选出fitSize, 那么最大的Size就是FitSize
+            if (fitSize == null) {
+                fitSize = biggestSize;
+            }
+
+            parametes.setPictureSize(fitSize.width, fitSize.height);
+        }
+    }
+
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         try {
             camera = Camera.open();
-        }
-
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             System.err.println(e);
             return;
         }
@@ -361,7 +517,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         Camera.Parameters param;
         param = camera.getParameters();
         param.getSupportedPictureSizes();
-        param.setPreviewSize(352, 288);
+        // param.setPreviewSize(352, 288);
+        setPreviewSize(param);
+        setPictureSize(param);
+
         camera.setParameters(param);
         camera.setDisplayOrientation(90);
 
@@ -369,9 +528,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
             camera.setPreviewDisplay(holder);
             initCamera();
             camera.startPreview();
-        }
-
-        catch (Exception e) {
+        } catch (Exception e) {
             System.err.println(e);
             return;
         }
@@ -383,7 +540,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         camera.autoFocus(new Camera.AutoFocusCallback() {
             @Override
             public void onAutoFocus(boolean success, Camera camera) {
-                if(success){
+                if (success) {
                     initCamera();//实现相机的参数初始化
                     camera.cancelAutoFocus();//只有加上了这一句，才会自动对焦。
                 }
